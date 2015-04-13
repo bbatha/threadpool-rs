@@ -7,8 +7,8 @@ pub struct ScopedThreadPool {
 }
 
 impl ScopedThreadPool {
-    pub fn new(size: isize) -> ScopedThreadPool {
-       ScopedThreadPool { sem: std::sync::Semaphore::new(size) }
+    pub fn new(size: u32) -> ScopedThreadPool {
+       ScopedThreadPool { sem: std::sync::Semaphore::new(size as isize) /* as safe here? */}
     }
 
     pub fn execute<'a, T, F>(&'a self, func: F) -> std::thread::JoinGuard<'a, T>
