@@ -22,21 +22,23 @@ impl ThreadPool {
     }
 }
 
-#[test]
-fn it_works() {
-    let pool = ThreadPool::new(2);
-    pool.spawn(move || {
-        std::thread::sleep_ms(1000);
-        println!("Done!");
-    });
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::thread;
 
-    pool.spawn(move || {
-        std::thread::sleep_ms(1000);
-        println!("Done!");
-    });
+    #[test]
+    // TODO find a better way to test than have someone pay attention to the commandline...
+    fn it_works() {
+        let pool = ThreadPool::new(2);
 
-    pool.spawn(move || {
-        std::thread::sleep_ms(1000);
-        println!("Done!");
-    })
+        let mut guards: Vec<thread::JoinGuard<()>> = Vec::new();
+
+        for _ in (0..3) {
+            guards.push(pool.scoped(move || {
+                thread::sleep_ms(1000);
+                println!("Things are happening!");
+            }));
+        }
+    }
 }
