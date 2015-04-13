@@ -11,7 +11,7 @@ impl ThreadPool {
        ThreadPool { sem: std::sync::Semaphore::new(size) }
     }
 
-    pub fn spawn<'a, T, F>(&'a self, func: F) -> std::thread::JoinGuard<'a, T>
+    pub fn scoped<'a, T, F>(&'a self, func: F) -> std::thread::JoinGuard<'a, T>
         where T: Send + 'a, F: FnOnce() -> T, F: Send + 'a
     {
        let guard = self.sem.access();
