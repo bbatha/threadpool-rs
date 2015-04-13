@@ -14,8 +14,9 @@ impl ThreadPool {
     pub fn spawn<'a, T, F>(&'a self, func: F) -> std::thread::JoinGuard<'a, T>
         where T: Send + 'a, F: FnOnce() -> T, F: Send + 'a
     {
+       let guard = self.sem.access();
        thread::scoped(move || {
-           let guard = self.sem.access();
+           let _guard = guard;
            func()
        })
     }
