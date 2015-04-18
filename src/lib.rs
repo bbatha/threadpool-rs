@@ -1,24 +1,30 @@
 #![feature(std_misc)]
+#![feature(scoped)]
 use std::sync::Semaphore;
 use std::thread;
 
-pub struct ScopedThreadPool {
+pub struct ScopedThreadPool<'a> {
     sem: std::sync::Semaphore,
+    guards: std::vec::Vec<thread::JoinGuard<'a, ()>>,
 }
 
-impl ScopedThreadPool {
-    pub fn new(size: u32) -> ScopedThreadPool {
-       ScopedThreadPool { sem: std::sync::Semaphore::new(size as isize) /* as safe here? */}
+impl<'a> ScopedThreadPool<'a> {
+    pub fn new(size: u32) -> ScopedThreadPool<'a> {
+        ScopedThreadPool {
+            sem: std::sync::Semaphore::new(size as isize), /* as safe here? */
+            guards: Vec::new(),
+        }
     }
 
-    pub fn execute<'a, T, F>(&'a self, func: F) -> std::thread::JoinGuard<'a, T>
-        where T: Send + 'a, F: FnOnce() -> T, F: Send + 'a
+    pub fn execute<F>(&'a mut self, func: F)
+        where F: FnOnce() -> (), F: Send + 'a
     {
-       let guard = self.sem.access();
-       thread::scoped(move || {
-           let _guard = guard;
-           func()
-       })
+        let pool_guard = self.sem.access();
+        let join_guard = thread::scoped(move || {
+            let _pg = pool_guard;
+            func()
+        });
+        self.guards.push(join_guard);
     }
 }
 
@@ -30,15 +36,13 @@ mod test {
     #[test]
     // TODO find a better way to test than have someone pay attention to the commandline...
     fn it_works() {
-        let pool = ScopedThreadPool::new(2);
-
-        let mut guards: Vec<thread::JoinGuard<()>> = Vec::new();
+        let mut pool = ScopedThreadPool::new(2);
 
         for _ in (0..3) {
-            guards.push(pool.execute(move || {
+           pool.execute(move || {
                 thread::sleep_ms(1000);
                 println!("Things are happening!");
-            }));
+            });
         }
     }
 }
